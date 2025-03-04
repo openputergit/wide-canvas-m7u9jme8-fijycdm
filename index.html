@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Comparison Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.css" />
+    <style>
+        .swiper {
+            width: 100%;
+            height: 100%;
+        }
+        .custom-file-input::-webkit-file-upload-button {
+            visibility: hidden;
+        }
+        .custom-file-input::before {
+            content: 'Select file';
+            display: inline-block;
+            background: #4F46E5;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .result-slider {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .loading-overlay {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+            <h1 class="text-2xl font-bold text-gray-900">Document Comparison Tool</h1>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <!-- File Upload Section -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <form id="uploadForm" class="space-y-6">
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <!-- File 1 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">First Document</label>
+                        <div class="mt-1">
+                            <input type="file" id="file1" name="file1" accept=".pdf,.png,.jpg,.jpeg"
+                                class="custom-file-input block w-full text-sm text-gray-500
+                                file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
+                                file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700
+                                hover:file:bg-indigo-100" required>
+                        </div>
+                        <div id="preview1" class="mt-2 h-48 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <p class="text-gray-500">Preview will appear here</p>
+                        </div>
+                    </div>
+
+                    <!-- File 2 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Second Document</label>
+                        <div class="mt-1">
+                            <input type="file" id="file2" name="file2" accept=".pdf,.png,.jpg,.jpeg"
+                                class="custom-file-input block w-full text-sm text-gray-500
+                                file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
+                                file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700
+                                hover:file:bg-indigo-100" required>
+                        </div>
+                        <div id="preview2" class="mt-2 h-48 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <p class="text-gray-500">Preview will appear here</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center">
+                    <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Compare Documents
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="hidden">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">Comparison Results</h2>
+                
+                <!-- Original Documents -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-medium mb-4">Original Documents</h3>
+                    <div class="swiper originalSwiper">
+                        <div class="swiper-wrapper">
+                            <!-- Original slides will be inserted here -->
+                        </div>
+                        <div class="swiper-pagination"></div>
+                        <div class="swiper-button-next"></div>
+                        <div class="swiper-button-prev"></div>
+                    </div>
+                </div>
+
+                <!-- Difference Results -->
+                <div>
+                    <h3 class="text-lg font-medium mb-4">Differences Detected</h3>
+                    <div class="swiper resultSwiper">
+                        <div class="swiper-wrapper">
+                            <!-- Result slides will be inserted here -->
+                        </div>
+                        <div class="swiper-pagination"></div>
+                        <div class="swiper-button-next"></div>
+                        <div class="swiper-button-prev"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="hidden fixed inset-0 loading-overlay flex items-center justify-center z-50">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mb-4"></div>
+                <p class="text-lg font-semibold text-gray-900">Processing documents...</p>
+                <p class="text-sm text-gray-500">This may take a few moments</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.js"></script>
+    <script>
+        // Initialize Swiper
+        let originalSwiper;
+        let resultSwiper;
+
+        function initSwipers() {
+            originalSwiper = new Swiper('.originalSwiper', {
+                slidesPerView: 2,
+                spaceBetween: 20,
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                },
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+            });
+
+            resultSwiper = new Swiper('.resultSwiper', {
+                slidesPerView: 1,
+                spaceBetween: 20,
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                },
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+            });
+        }
+
+        // Preview functionality
+        function previewFile(file, previewId) {
+            const preview = document.getElementById(previewId);
+            preview.innerHTML = '';
+
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.classList.add('h-full', 'w-full', 'object-contain');
+                img.file = file;
+
+                const reader = new FileReader();
+                reader.onload = (e) => img.src = e.target.result;
+                reader.readAsDataURL(file);
+
+                preview.appendChild(img);
+            } else if (file.type === 'application/pdf') {
+                const iframe = document.createElement('iframe');
+                iframe.classList.add('h-full', 'w-full');
+                
+                const reader = new FileReader();
+                reader.onload = (e) => iframe.src = e.target.result;
+                reader.readAsDataURL(file);
+
+                preview.appendChild(iframe);
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('file1').addEventListener('change', function(e) {
+            previewFile(e.target.files[0], 'preview1');
+        });
+
+        document.getElementById('file2').addEventListener('change', function(e) {
+            previewFile(e.target.files[0], 'preview2');
+        });
+
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const resultsSection = document.getElementById('results');
+            
+            try {
+                loadingOverlay.classList.remove('hidden');
+                
+                const formData = new FormData();
+                formData.append('file1', document.getElementById('file1').files[0]);
+                formData.append('file2', document.getElementById('file2').files[0]);
+
+                const response = await fetch('/compare-documents/', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const data = await response.json();
+
+                // Clear existing slides
+                document.querySelector('.originalSwiper .swiper-wrapper').innerHTML = '';
+                document.querySelector('.resultSwiper .swiper-wrapper').innerHTML = '';
+
+                // Add original document slides
+                data.original_images.forEach(img => {
+                    const slide = document.createElement('div');
+                    slide.className = 'swiper-slide';
+                    slide.innerHTML = `<img src="${img}" class="w-full h-auto" alt="Original document">`;
+                    document.querySelector('.originalSwiper .swiper-wrapper').appendChild(slide);
+                });
+
+                // Add result slides
+                data.result_images.forEach(img => {
+                    const slide = document.createElement('div');
+                    slide.className = 'swiper-slide';
+                    slide.innerHTML = `<img src="${img}" class="w-full h-auto" alt="Comparison result">`;
+                    document.querySelector('.resultSwiper .swiper-wrapper').appendChild(slide);
+                });
+
+                // Initialize Swiper
+                initSwipers();
+                
+                // Show results
+                resultsSection.classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while processing the documents. Please try again.');
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        });
+
+        // Initialize Swiper on page load
+        document.addEventListener('DOMContentLoaded', initSwipers);
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
